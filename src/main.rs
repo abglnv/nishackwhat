@@ -48,6 +48,7 @@ async fn main() {
         .route("/students/active", get(routes::students::list_active))
         .route("/students/{hostname}", get(routes::students::student_detail))
         .route("/students/{hostname}/lock", post(routes::lock::lock_student))
+        .route("/students/{hostname}/open-url", post(routes::lock::open_url_student))
         // Agent data ingestion
         .route("/agent/heartbeat", post(routes::agent::heartbeat))
         .route("/agent/screenshot", post(routes::agent::screenshot))
