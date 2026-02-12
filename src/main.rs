@@ -1,5 +1,7 @@
 use axum::routing::{get, post};
 use axum::Router;
+use axum::extract::State;
+use axum::Json;
 use std::sync::Arc;
 use std::time::Duration;
 use tower_http::cors::CorsLayer;
@@ -50,11 +52,15 @@ async fn main() {
         .route("/agent/screenshot", post(routes::agent::screenshot))
         .route("/agent/notification", post(routes::agent::notification))
         .route("/agent/apps", post(routes::agent::apps))
-        .route("/agent/violation", post(routes::agent::violation));
+        .route("/agent/violation", post(routes::agent::violation))
+        // Screen streaming info
+        .route("/screen/students", get(screen_students_handler));
 
     let app = Router::new()
         .nest("/api", api)
         .route("/ws", get(routes::ws::ws_handler))
+        .route("/ws/screen", get(routes::screen_ws::ws_screen_student))
+        .route("/ws/screen/view", get(routes::screen_ws::ws_screen_teacher))
         .fallback_service(ServeDir::new("frontend"))
         .layer(CorsLayer::permissive())
         .with_state(shared);
@@ -66,6 +72,21 @@ async fn main() {
 
     tracing::info!("🚀 NiShack backend listening on http://{addr}");
     axum::serve(listener, app).await.unwrap();
+}
+
+/// GET /api/screen/students — list students currently streaming screens
+async fn screen_students_handler(
+    State(state): State<Arc<AppState>>,
+) -> Json<serde_json::Value> {
+    let students: Vec<String> = state
+        .screen_latest
+        .iter()
+        .map(|e| e.key().clone())
+        .collect();
+    Json(serde_json::json!({
+        "count": students.len(),
+        "students": students,
+    }))
 }
 
 /// Every 5 minutes, store this machine's IP in Redis.
