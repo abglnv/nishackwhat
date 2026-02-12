@@ -1,0 +1,25 @@
+port = 8080
+redis_url = "redis://127.0.0.1:6379"
+key_prefix = "nishack"
+scan_interval_secs = 30
+heartbeat_ttl_secs = 90
+
+banned_sites = [
+    "youtube.com",
+    "tiktok.com",
+    "instagram.com",
+    "facebook.com",
+    "twitter.com",
+    "x.com",
+    "reddit.com",
+    "twitch.tv",
+    "netflix.com",
+]
+
+banned_apps = [
+    "Discord",
+    "Telegram",
+    "Steam",
+    "Epic Games",
+    "Spotify",
+]

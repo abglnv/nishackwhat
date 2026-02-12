@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>NiShack — Classroom Monitor</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- ── Top bar ────────────────────────────────── -->
+  <header id="topbar">
+    <div class="brand">🎓 <span>NiShack</span> Classroom Monitor</div>
+    <div class="status-pills">
+      <span id="pillOnline" class="pill green">0 Online</span>
+      <span id="pillTotal" class="pill gray">0 Total</span>
+      <span id="wsStatus" class="pill red">⬤ Disconnected</span>
+    </div>
+  </header>
+
+  <div id="layout">
+    <!-- ── Sidebar: student list ─────────────────── -->
+    <aside id="sidebar">
+      <div class="sidebar-head">
+        <h3>Students</h3>
+        <select id="filterSelect">
+          <option value="all">All</option>
+          <option value="active">Active</option>
+          <option value="inactive">Inactive</option>
+        </select>
+      </div>
+      <ul id="studentList"></ul>
+    </aside>
+
+    <!-- ── Main content ──────────────────────────── -->
+    <main id="main">
+      <div id="noSelection">
+        <p>👈 Select a student to view details</p>
+      </div>
+
+      <div id="detail" class="hidden">
+        <!-- Info bar -->
+        <div id="detailHeader">
+          <h2 id="detailHostname"></h2>
+          <span id="detailStatus" class="pill"></span>
+          <span id="detailOS" class="meta"></span>
+          <span id="detailUser" class="meta"></span>
+          <span id="detailIP" class="meta"></span>
+        </div>
+
+        <!-- Resource bars -->
+        <div class="resource-bars">
+          <div class="bar-group">
+            <label>CPU</label>
+            <div class="bar"><div id="barCPU" class="bar-fill"></div></div>
+            <span id="lblCPU">0%</span>
+          </div>
+          <div class="bar-group">
+            <label>RAM</label>
+            <div class="bar"><div id="barRAM" class="bar-fill"></div></div>
+            <span id="lblRAM">0%</span>
+          </div>
+        </div>
+
+        <!-- Screenshot -->
+        <section class="card" id="screenshotCard">
+          <h4>📸 Screenshot</h4>
+          <div id="screenshotContainer">
+            <p class="muted">No screenshot available</p>
+          </div>
+        </section>
+
+        <!-- Apps & Tabs -->
+        <div class="two-col">
+          <section class="card">
+            <h4>🖥️ Applications</h4>
+            <table id="appsTable">
+              <thead><tr><th>Name</th><th>PID</th><th>Mem</th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </section>
+          <section class="card">
+            <h4>🌐 Browser Tabs</h4>
+            <table id="tabsTable">
+              <thead><tr><th>Title</th><th>URL</th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </section>
+        </div>
+
+        <!-- Violations -->
+        <section class="card">
+          <h4>⚠️ Violations <span id="violCount" class="badge">0</span></h4>
+          <ul id="violList" class="event-list"></ul>
+        </section>
+
+        <!-- Notifications -->
+        <section class="card">
+          <h4>🔔 Notifications</h4>
+          <ul id="notifList" class="event-list"></ul>
+        </section>
+      </div>
+    </main>
+
+    <!-- ── Chat panel ────────────────────────────── -->
+    <aside id="chatPanel">
+      <h3>💬 Live Chat</h3>
+      <div id="chatTarget">
+        <select id="chatTo">
+          <option value="all">Broadcast (all)</option>
+        </select>
+      </div>
+      <div id="chatMessages"></div>
+      <form id="chatForm">
+        <input id="chatInput" type="text" placeholder="Type a message…" autocomplete="off" />
+        <button type="submit">Send</button>
+      </form>
+    </aside>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
