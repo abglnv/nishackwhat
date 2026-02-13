@@ -88,6 +88,133 @@ pub async fn lock_student(
     }
 }
 
+/// GET /api/apps/:hostname
+/// Proxies to student's /apps endpoint to get running processes.
+pub async fn get_apps_student(
+    State(state): State<Arc<AppState>>,
+    Path(hostname): Path<String>,
+) -> Result<Json<Value>, StatusCode> {
+    let mut conn = state.redis.clone();
+    let prefix = &state.config.key_prefix;
+
+    let agents = redis_store::get_all_agents(&mut conn, prefix)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    let entry = agents
+        .iter()
+        .find(|e| e.starts_with(&format!("{hostname}|")))
+        .ok_or(StatusCode::NOT_FOUND)?;
+
+    let parts: Vec<&str> = entry.split('|').collect();
+    if parts.len() < 3 {
+        return Err(StatusCode::INTERNAL_SERVER_ERROR);
+    }
+    let ip = parts[1];
+    let port = parts[2];
+
+    let url = format!("http://{ip}:{port}/apps");
+    tracing::info!("📋 Fetching apps from {hostname} at {url}");
+
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(5))
+        .build()
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    match client.get(&url).send().await {
+        Ok(resp) if resp.status().is_success() => {
+            let body: Value = resp.json().await.unwrap_or(serde_json::json!({
+                "hostname": hostname,
+                "applications": [],
+                "browser_tabs": [],
+            }));
+            Ok(Json(body))
+        }
+        Ok(resp) => {
+            let status = resp.status();
+            tracing::warn!("Student {hostname} returned {status}");
+            Ok(Json(serde_json::json!({
+                "hostname": hostname,
+                "applications": [],
+                "browser_tabs": [],
+                "error": format!("Student returned {status}")
+            })))
+        }
+        Err(e) => {
+            tracing::warn!("Failed to reach student {hostname}: {e}");
+            Ok(Json(serde_json::json!({
+                "hostname": hostname,
+                "applications": [],
+                "browser_tabs": [],
+                "error": format!("Cannot reach student: {e}")
+            })))
+        }
+    }
+}
+
+/// POST /api/broadcast/open-url
+/// Body: { "url": "https://kahoot.it/..." }
+/// Opens a URL on ALL active student PCs.
+pub async fn broadcast_open_url(
+    State(state): State<Arc<AppState>>,
+    Json(body): Json<OpenUrlRequest>,
+) -> Result<Json<Value>, StatusCode> {
+    if !body.url.starts_with("http://") && !body.url.starts_with("https://") {
+        return Ok(Json(serde_json::json!({
+            "status": "error",
+            "error": "URL must start with http:// or https://"
+        })));
+    }
+
+    let mut conn = state.redis.clone();
+    let prefix = &state.config.key_prefix;
+
+    let agents = redis_store::get_all_agents(&mut conn, prefix)
+        .await
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(5))
+        .build()
+        .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
+
+    let mut success = 0usize;
+    let mut failed = 0usize;
+    let total = agents.len();
+
+    for entry in &agents {
+        let parts: Vec<&str> = entry.split('|').collect();
+        if parts.len() < 3 { failed += 1; continue; }
+        let ip = parts[1];
+        let port = parts[2];
+        let hostname = parts[0];
+
+        let url = format!("http://{ip}:{port}/open-url");
+        match client
+            .post(&url)
+            .json(&serde_json::json!({ "url": body.url }))
+            .send()
+            .await
+        {
+            Ok(resp) if resp.status().is_success() => {
+                tracing::info!("✅ URL opened on {hostname}");
+                success += 1;
+            }
+            _ => {
+                tracing::warn!("❌ Failed to open URL on {hostname}");
+                failed += 1;
+            }
+        }
+    }
+
+    Ok(Json(serde_json::json!({
+        "status": "ok",
+        "total": total,
+        "success": success,
+        "failed": failed,
+    })))
+}
+
 /// POST /api/students/:hostname/open-url
 /// Body: { "url": "https://kahoot.it/..." }
 /// Opens a URL in the student's default browser.

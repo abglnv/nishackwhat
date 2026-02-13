@@ -34,6 +34,21 @@ async fn main() {
 
     let shared = Arc::new(AppState::new(cfg.clone(), redis_conn));
 
+    // Push initial ban config to Redis so students can pick it up
+    {
+        let mut conn = shared.redis.clone();
+        let prefix = &shared.config.key_prefix;
+        let ban_json = serde_json::json!({
+            "banned_processes": shared.config.banned_apps,
+            "banned_domains": shared.config.banned_sites,
+        });
+        let key = format!("{prefix}:ban_config");
+        let _: Result<(), _> = redis::AsyncCommands::set::<_, _, ()>(
+            &mut conn, &key, ban_json.to_string(),
+        ).await;
+        tracing::info!("Ban config published to Redis");
+    }
+
     // Background tasks
     tokio::spawn(ip_update_task(shared.clone()));
 
@@ -49,6 +64,9 @@ async fn main() {
         .route("/students/:hostname", get(routes::students::student_detail))
         .route("/students/:hostname/lock", post(routes::lock::lock_student))
         .route("/students/:hostname/open-url", post(routes::lock::open_url_student))
+        .route("/apps/:hostname", get(routes::lock::get_apps_student))
+        .route("/broadcast/open-url", post(routes::lock::broadcast_open_url))
+        .route("/config", axum::routing::put(routes::config_route::update_config))
         // Agent data ingestion
         .route("/agent/heartbeat", post(routes::agent::heartbeat))
         .route("/agent/screenshot", post(routes::agent::screenshot))
