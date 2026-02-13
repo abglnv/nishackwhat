@@ -34,6 +34,19 @@ async fn main() {
 
     let shared = Arc::new(AppState::new(cfg.clone(), redis_conn));
 
+    // Publish teacher address to Redis so students can discover us
+    {
+        let mut conn = shared.redis.clone();
+        let prefix = &shared.config.key_prefix;
+        if let Ok(ip) = local_ip_address::local_ip() {
+            let key = format!("{prefix}:server:ip");
+            let _: Result<(), _> = redis::AsyncCommands::set_ex::<_, _, ()>(
+                &mut conn, &key, ip.to_string(), 600,
+            ).await;
+            tracing::info!("Teacher address published to Redis: {ip}:{}", shared.config.port);
+        }
+    }
+
     // Push initial ban config to Redis so students can pick it up
     {
         let mut conn = shared.redis.clone();
