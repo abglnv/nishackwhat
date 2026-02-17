@@ -60,6 +60,13 @@ async fn main() {
             &mut conn, &key, ban_json.to_string(),
         ).await;
         tracing::info!("Ban config published to Redis");
+
+        // Push initial SAU mode
+        let sau_key = format!("{prefix}:sau_mode");
+        let _: Result<(), _> = redis::AsyncCommands::set::<_, _, ()>(
+            &mut conn, &sau_key, if shared.config.sau_mode { "1" } else { "0" },
+        ).await;
+        tracing::info!("SAU mode published to Redis: {}", shared.config.sau_mode);
     }
 
     // Background tasks

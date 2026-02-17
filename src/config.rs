@@ -10,6 +10,8 @@ pub struct Config {
     pub heartbeat_ttl_secs: u64,
     pub banned_sites: Vec<String>,
     pub banned_apps: Vec<String>,
+    #[serde(default)]
+    pub sau_mode: bool,
 }
 
 impl Default for Config {
@@ -22,6 +24,7 @@ impl Default for Config {
             heartbeat_ttl_secs: 90,
             banned_sites: vec![],
             banned_apps: vec![],
+            sau_mode: false,
         }
     }
 }
